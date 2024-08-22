@@ -3,8 +3,6 @@ import subprocess
 import importlib
 from dataclasses import dataclass, field
 
-import logging
-
 
 @dataclass
 class ImportParams:

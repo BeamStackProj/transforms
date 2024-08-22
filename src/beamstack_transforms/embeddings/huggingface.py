@@ -42,7 +42,6 @@ class CreateEmbeddings(PTransform):
                 self.embedder = SentenceTransformer(self.embed_model)
 
             def process(self, element):
-                logger.info(f"recieved element {element}")
                 if hasattr(element, '_asdict'):
                     embeddings = {key: self.embedder.encode(
                         str(value), **self.encode_kwargs).astype(self.np.float32).tolist()
