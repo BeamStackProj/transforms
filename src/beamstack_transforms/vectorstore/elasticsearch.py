@@ -42,17 +42,18 @@ class WriteToElasticsearchVectorStore(PTransform):
 
     class _WriteToElasticsearch(DoFn):
 
-        def __init__(self, index_name: str = None, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, es_kwargs: dict = {}, label: str | None = None):
+        def __init__(self, index_name: str = None, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, es_kwargs: dict = {}):
             self.es_url = es_url
             self.es_kwargs = es_kwargs
             self.es_api_key = es_api_key
             self.es_cloud_id = es_cloud_id
             self.index_name = index_name
+            self.prev_node_id = ""
 
         def start_bundle(self):
             try:
                 install_package(REQUIRED_PACKAGES)
-                ElasticsearchStoreObj, self.TextNodeObj = import_package(
+                ElasticsearchStoreObj, self.TextNodeObj, self.NodeRelationshipObj, self.RelatedNodeInfoObj = import_package(
                     modules=[
                         ImportParams(
                             module="llama_index.vector_stores.elasticsearch",
@@ -60,7 +61,11 @@ class WriteToElasticsearchVectorStore(PTransform):
                         ),
                         ImportParams(
                             module="llama_index.core.schema",
-                            objects=["TextNode"]
+                            objects=[
+                                "TextNode",
+                                "NodeRelationship",
+                                "RelatedNodeInfo"
+                            ]
                         )
                     ]
                 )
@@ -80,9 +85,14 @@ class WriteToElasticsearchVectorStore(PTransform):
             )
 
         def process(self, element):
+            logger.info(f"previous node id {self.prev_node_id}")
             node = self.TextNodeObj(
                 **element
             )
-
+            if self.prev_node_id != "":
+                node.relationships[self.NodeRelationshipObj.PREVIOUS] = self.RelatedNodeInfoObj(
+                    node_id=self.prev_node_id
+                )
+            self.prev_node_id = node.node_id
             self.es_vector_store.add(
                 nodes=[node], create_index_if_not_exists=True)

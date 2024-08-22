@@ -12,27 +12,27 @@ REQUIRED_PACKAGES = ["openai"]
 
 
 class CreateEmbeddings(PTransform):
-    def __init__(self, embed_model: str, api_key: str, embed_indexes: list[str] = [], doc_id_index: str = None, metadata_indexes: list[str] = [], create_kwargs: dict = {}, label: str | None = None) -> None:
+    def __init__(self, embed_model: str, api_key: str, embed_fields: list[str] = [], doc_id: str = None, metadata_fields: list[str] = [], create_kwargs: dict = {}, label: str | None = None) -> None:
         super().__init__(label)
         self.embed_model = embed_model
         self.create_kwargs = create_kwargs
         self.api_key = api_key
-        self.metadata_indexes = metadata_indexes
-        self.embed_indexes = embed_indexes
-        self.doc_id_index = doc_id_index
+        self.metadata_fields = metadata_fields
+        self.embed_fields = embed_fields
+        self.doc_id = doc_id
 
     def expand(self, pcoll: PCollection):
         return (
             pcoll
-            | "Validate Colection" >> ParDo(self._ValidateCol(self.embed_indexes, self.metadata_indexes, self.doc_id_index))
+            | "Validate Colection" >> ParDo(self._ValidateCol(self.embed_fields, self.metadata_fields, self.doc_id))
             | "Create Embedding" >> ParDo(self._createEmbedding(self.embed_model, self.api_key, self.create_kwargs))
         )
 
     class _ValidateCol(DoFn):
-        def __init__(self, embed_indexes: list[str] = [], metadata_indexes: list[str] = [], doc_id_index: str = None):
-            self.embed_indexes = embed_indexes
-            self.metadata_indexes = metadata_indexes
-            self.doc_id_index = doc_id_index
+        def __init__(self, embed_fields: list[str] = [], metadata_fields: list[str] = [], doc_id: str = None):
+            self.embed_fields = embed_fields
+            self.metadata_fields = metadata_fields
+            self.doc_id = doc_id
 
         def process(self, element):
             doc = {
@@ -45,12 +45,12 @@ class CreateEmbeddings(PTransform):
                 text_parts = []
 
                 for key, value in element_dict.items():
-                    if key in self.embed_indexes:
+                    if key in self.embed_fields:
                         text_parts.append(value)
-                    elif key in self.metadata_indexes:
+                    elif key in self.metadata_fields:
                         doc["metadata"][key] = value
-                    elif key == self.doc_id_index:
-                        doc["_id"] = value
+                    elif key == self.doc_id:
+                        doc["id_"] = value
 
                 doc["text"] = "\n".join(text_parts)
             else:
