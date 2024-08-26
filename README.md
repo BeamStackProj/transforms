@@ -7,10 +7,10 @@ Beamstack has a robust collection of custom `PTransforms` specifically designed 
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Offerings of Beamstack Transforms](#offerings-of-beamstack-transforms)
-3. [Components of Beamstack Transforms](#components-of-beamstack-transforms)
-4. [Detailed Overview of Beamstack Transform Components](#detailed-overview-of-beamstack-transform-components)
-5. [Usage of Beamstack Transforms](#usage-of-beamstack-transforms)  
+2. [Features of Beamstack PTransforms](#features-of-beamstack-ptransforms)
+3. [Components of Beamstack PTransforms](#components-of-beamstack-ptransforms)
+4. [Detailed Overview of Beamstack PTransform Components](#detailed-overview-of-beamstack-ptransform-components)
+5. [Usage of Beamstack PTransforms](#usage-of-beamstack-ptransforms)  
 
 ---
 
@@ -54,7 +54,7 @@ Beamstack offers a comprehensive set of `PTransforms` that are easy to integrate
 
 ---
 
-## Components of Beamstack Transforms
+## Components of Beamstack PTransforms
 
 Beamstack is organized into the following core components:  
 
@@ -92,7 +92,7 @@ Beamstack is organized into the following core components:
 
 ---
 
-## Detailed Overview of Beamstack Transform Components
+## Detailed Overview of Beamstack PTransform Components
 
 ### 1. Embedding Transforms
 
@@ -112,4 +112,4 @@ With ML Inference Transforms, you can seamlessly run machine learning models wit
 
 ---
 
-## Usage of Beamstack Transforms
+## Usage of Beamstack PTransforms
