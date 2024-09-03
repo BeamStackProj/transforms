@@ -13,10 +13,11 @@ REQUIRED_PACKAGES = [
 
 
 class WriteToElasticsearchVectorStore(PTransform):
-    def __init__(self, index_name: str, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, es_kwargs: dict = {}, label: str | None = None) -> None:
+    def __init__(self, index_name: str, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, client_kwargs: dict = {}, store_kwargs: dict = {}, label: str | None = None) -> None:
         super().__init__(label)
         self.es_url = es_url
-        self.es_kwargs = es_kwargs
+        self.client_kwargs = client_kwargs
+        self.store_kwargs = store_kwargs
         self.es_api_key = es_api_key
         self.es_cloud_id = es_cloud_id
         self.index_name = index_name
@@ -25,7 +26,7 @@ class WriteToElasticsearchVectorStore(PTransform):
         return (
             pcoll
             | "Prepare for Elasticsearch" >> ParDo(self._PrepareDoc())
-            | "Write to Elasticsearch" >> ParDo(self._WriteToElasticsearch(self.index_name, self.es_url, self.es_api_key, self.es_cloud_id, self.es_kwargs))
+            | "Write to Elasticsearch" >> ParDo(self._WriteToElasticsearch(self.index_name, self.es_url, self.es_api_key, self.es_cloud_id, self.client_kwargs, self.store_kwargs))
         )
 
     class _PrepareDoc(DoFn):
@@ -42,9 +43,10 @@ class WriteToElasticsearchVectorStore(PTransform):
 
     class _WriteToElasticsearch(DoFn):
 
-        def __init__(self, index_name: str = None, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, es_kwargs: dict = {}):
+        def __init__(self, index_name: str = None, es_url: str = None, es_api_key: str = None, es_cloud_id: str = None, client_kwargs: dict = {}, store_kwargs: dict = {}):
             self.es_url = es_url
-            self.es_kwargs = es_kwargs
+            self.client_kwargs = client_kwargs
+            self.store_kwargs = store_kwargs
             self.es_api_key = es_api_key
             self.es_cloud_id = es_cloud_id
             self.index_name = index_name
@@ -53,8 +55,12 @@ class WriteToElasticsearchVectorStore(PTransform):
         def start_bundle(self):
             try:
                 install_package(REQUIRED_PACKAGES)
-                ElasticsearchStoreObj, self.TextNodeObj, self.NodeRelationshipObj, self.RelatedNodeInfoObj = import_package(
+                ClientObj, ElasticsearchStoreObj, self.TextNodeObj, self.NodeRelationshipObj, self.RelatedNodeInfoObj = import_package(
                     modules=[
+                        ImportParams(
+                            module="elasticsearch",
+                            objects=["Elasticsearch"]
+                        ),
                         ImportParams(
                             module="llama_index.vector_stores.elasticsearch",
                             objects=["ElasticsearchStore"]
@@ -74,14 +80,16 @@ class WriteToElasticsearchVectorStore(PTransform):
                 logger.error("ERROR IMPORTING PACKAGE")
                 logger.error(e)
                 quit()
-
+            client = ClientObj(
+                self.es_url,
+                cloud_id=self.es_cloud_id,
+                api_key=self.es_api_key,
+                **self.client_kwargs
+            )
             self.es_vector_store = ElasticsearchStoreObj(
                 index_name=self.index_name,
-                es_url=self.es_url,
-                es_cloud_id=self.es_cloud_id,
-                es_api_key=self.es_api_key,
-                **self.es_kwargs
-
+                es_client=client,
+                **self.store_kwargs
             )
 
         def process(self, element):
