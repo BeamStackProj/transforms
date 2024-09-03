@@ -59,7 +59,7 @@ class WriteToElasticsearchVectorStore(PTransform):
                     modules=[
                         ImportParams(
                             module="elasticsearch",
-                            objects=["Elasticsearch"]
+                            objects=["AsyncElasticsearch"]
                         ),
                         ImportParams(
                             module="llama_index.vector_stores.elasticsearch",
