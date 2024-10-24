@@ -1,6 +1,6 @@
 # Beamstack Transform Garden
 
-Beamstack has a robust collection of custom `Transforms` specifically designed to simplify and accelerate data transformations in Apache Beam workflows.
+Beamstack has a collection of custom `Transforms` specifically designed to streamline and simplify data transformations in Apache Beam workflows.
 
 ---
 
@@ -10,7 +10,7 @@ Beamstack has a robust collection of custom `Transforms` specifically designed t
 2. [Requirements](#requirements)
 3. [System Overview](#system-overview)
 4. [Technical Details](#technical-details)
-   - [Transform Specification](#transform-specification)
+   - [Transform System Specifications](#transform-system-specifications)
    - [Repository Layout](#repository-layout)
 5. [Architecture](#architecture)  
 
@@ -20,7 +20,7 @@ Beamstack has a robust collection of custom `Transforms` specifically designed t
 
 The BeamStack Transform Garden hopes to establish a set of standards for the implementation of Apache Beam transform collections, specifically designed to support large, independent, AI-focused transforms. Its primary goal is to provide a specification for the creation and management of user-defined transform collections, and their seamless integration with Apache Beam YAML pipelines.
 
-This framework is essential for enabling the efficient `collection`, `isolation`, and `distribution` of AI transforms, ensuring that complex, AI-driven workflows can be scaled, shared, and reused effectively across different environments and projects.  
+This framework is essential for enabling the efficient `collection`, `isolation`, and `distribution` of AI transforms, ensuring effective sharing of reusable AI transforms components across different environments and projects.  
 
 ---
 
@@ -102,7 +102,7 @@ In order to support this, the `Beam SDK` will require the implementation of a cu
 
 ## Technical Details
 
-### **Transform Specification**  
+### **Transform System Specifications**  
 `sample.yaml`
 ![transform spec](images/yaml_spec.png)
 
