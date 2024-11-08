@@ -25,7 +25,7 @@ def BeamstackTransform(urns, path):
         'urns': urns,
         'yaml_path': path,
         'dependencies': transform_yaml.get('dependencies', []),
-        'runner': transform_yaml.get('runner', 'DirectRunner')
+        'runner': transform_yaml.get('runner', [])
     }
     
     return BeamstackTransformProvider(urns, config)
@@ -35,7 +35,9 @@ class BeamstackTransformProvider(ExternalProvider):
     def __init__(self, urns, config):
         super().__init__(urns, BeamstackExpansionService(config))
         self.config = config
-        self.transforms = config['urns']
+        self.transforms = config.get('urns', {})
+
+        logger.info(f"Transforms: {self.transforms}")
 
     def available(self) -> bool:
         return True
@@ -43,34 +45,64 @@ class BeamstackTransformProvider(ExternalProvider):
     def cache_artifacts(self) -> Optional[Iterable[str]]:
         return [self._service._venv()]
 
-    def create_transform(self, typ: str, args: Mapping[str, Any], yaml_create_transform: Callable) -> beam.PTransform:
+    def create_transform(self, 
+                         typ: str, 
+                         args: Mapping[str, Any], 
+                         yaml_create_transform: Callable[[Mapping[str, Any], Iterable[beam.PCollection]], beam.PTransform]) -> Optional[beam.PTransform]:
         """Create a PTransform based on decoded source code and configurations."""
         if callable(self._service):
             self._service = self._service()
 
+        logger.info(f"Creating transform of type: {typ} with args: {args}")
+
         if typ in self.transforms:
             transform_class = self._load_transform_class(typ)
             if callable(transform_class):
-                processed_args = yaml_create_transform(args)
-                return transform_class(**processed_args)
+                config_args = args.get('config', {})
+                try:
+                    return transform_class(**config_args)
+                except TypeError as e:
+                    logger.error(f"Error initializing transform '{typ}': {e}")
+                    raise
             else:
                 logger.error(f"{typ} is not a callable transform class.")
         else:
-            logger.error(f"Transform type {typ} is not recognized.")
+            logger.error(f"Transform type '{typ}' is not recognized in BeamstackTransform.")
         return None
+
+    
+    def _module_class_map(self) -> dict:
+        """Transform module and class dictionary map"""
+        self.yaml_path = self.config.get('yaml_path')
+        
+        with open(self.yaml_path, 'r') as file:
+            data = yaml.safe_load(file)
+            self.transforms = data['transforms']
+
+            transform_map = {}
+            for item in self.transforms:
+                for _, value in item.items():
+                    file, transform_class = value.split(':')
+                    transform_map[transform_class] = file
+
+        return transform_map
 
     def _load_transform_class(self, transform_name):
         """Dynamically loads and returns a transform class by name."""
-        module_name, class_name = transform_name.split(":")
+        transform_map = self._module_class_map()
+
         try:
-            spec = importlib.util.spec_from_file_location(module_name, os.path.join(self._service._venv_path(), f"{module_name}.py"))
+            logger.info(f"Loading transform class for: {transform_name}")
+            spec = importlib.util.spec_from_file_location(transform_map[transform_name], os.path.join(self._service._venv_path(), transform_map[transform_name]))
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            transform_class = getattr(module, class_name)
+            transform_class = getattr(module, transform_name)
+            logger.info(f"Loaded transform class: {transform_class}")
             return transform_class
         except Exception as e:
             logger.error(f"Failed to load transform {transform_name}: {e}")
             raise e
+
 
     @classmethod
     def provider_from_spec(cls, spec):
@@ -104,10 +136,11 @@ class BeamstackExpansionService:
             for src_name, encoded_code in self.source_code.items():
                 decoded_code = base64.b64decode(encoded_code).decode('utf-8')
                 self._write_source_file(src_name, decoded_code)
+                self._source_module = src_name
 
     def _write_source_file(self, src_name, code):
         """Writes decoded code to file for each source."""
-        file_path = os.path.join(self._venv_path(), f"{src_name}.py")
+        file_path = os.path.join(self._venv_path(), src_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as f:
             f.write(code)
@@ -121,6 +154,7 @@ class BeamstackExpansionService:
     def _venv(self):
         """Creates and returns the virtual environment path if not exists."""
         venv = self._venv_path()
+        print(f"Virtual Environment: {venv}")
         if not os.path.exists(venv):
             subprocess.run([self.base_python, '-m', 'venv', venv], check=True)
             venv_pip = os.path.join(venv, 'bin', 'pip')
